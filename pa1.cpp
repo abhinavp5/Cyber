@@ -53,7 +53,7 @@ void timeout_handler(int signum){
 static void scan(const string& target, int start, int end) {
     //timeout handler
     signal(SIGALRM, timeout_handler);
-    alarm(3);//trigger syscall if program runs too long
+    alarm(3);//trigger syscall if the progams scans for too long
 
     //getting the timestamp
     time_t timestamp;
