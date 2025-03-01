@@ -13,6 +13,7 @@ using namespace std;
 
 static void scan(const string& target, int start, int end);
 static bool port_is_open(const string& address, int port);
+void timeout_handler(int signum);
 
 int main() {
 
@@ -43,8 +44,16 @@ int main() {
 }
 
 
-static void scan(const string& target, int start, int end) {
+//event-handler for timeout
+void timeout_handler(int signum){
+    cout<< "Target Scan Time Out, Prorgam Shutting Down...";
+    exit(1);
+}
 
+static void scan(const string& target, int start, int end) {
+    //timeout handler
+    signal(SIGALRM, timeout_handler);
+    alarm(3);//trigger syscall if program runs too long
 
     //getting the timestamp
     time_t timestamp;
