@@ -1,93 +1,148 @@
 #include <iostream>
 #include <string>
 #include <random>
-#include<math>
+#include <cmath>
 #include <vector>
 
 using namespace std;
 
+/*
+Function that returns the modular exponentiation of base^exp mod mod
+*/
+long long modPow(long long base, long long exp, long long mod) {
+    __int128 result = 1;
+    __int128 b = base % mod;
+
+    while (exp > 0) {
+        if (exp & 1) {
+            result = (result * b) % mod;
+        }
+        b = (b * b) % mod;
+        exp >>= 1;
+    }
+
+    return (long long)result;
+}
+
+
+/*
+Function that returns the modular inverse of a and m
+*/
+long long modInverse(long long a, long long m){
+    long long m0 = m, y = 0, x = 1;
+    if (m == 1) return 0;
+    while (a > 1){
+        long long q = a / m;
+        long long t = m;
+        m = a % m, a = t;
+        t = y;
+        y = x - q * y;
+        x = t;
+    }
+    return (x % m0 + m0) % m0; 
+}
 
 /*
 Function that generates a random Prime Number betwee 0 and 1000000)
 */
-int generate_prime(){
-    //seeidng random number
+long long generate_prime(){
+    //seeding random number
     random_device rd;
-    mt19937 gen(rd());  // using the Erse Twister Engine to Produce unbiased Random Numbers
-    uniform_int_distribution<> distrib(1, 999999);//genate num in range inclusive
+    mt19937 gen(rd());  // using the Mersenne Twister Engine to Produce unbiased Random Numbers
+    uniform_int_distribution<> distrib(1, 999999);//generate num in range inclusive
     bool isPrime = false;
     int firstPrimes [7] = {2,3,5,7,11,13,17};
     
     while (!isPrime){
         //1. generating a random number
-        int prime = distrib(gen);
+        long long prime = distrib(gen);
 
         //2. checking w/ the first 7 primes
+        bool divisible = false;
         for (int pn : firstPrimes){
-            if (prime%pn == 0 ){
-                continue; //go back upto the top of loop
+            if (prime % pn == 0 && prime != pn){
+                divisible = true;
+                break;
             }
         }
-
+        
+        if (divisible) {
+            continue; // Try another number if divisible by any of the first primes
+        }
 
         //3. Miler Rabin 
-        int temp = prime-1; 
-        int k =1; 
-        while (temp/ pow(2,k) <= prime && temp% pow(2,k) ==0 ){
+        long long temp = prime-1; 
+        long long k = 1; 
+        while ((temp / (1LL << k)) <= prime && temp % (1LL << k) == 0) {
             k++;
         }
-        k--; 
-        int m = temp/ pow(2,k);
+        k--;
+        long long m = temp / (1LL << k);
 
-        //chossing a value for a between 1 and n
-        int a = 2; 
+        //choosing a value for a between 1 and n
+        long long a = 2; 
 
-        int b0 = pow(2,m) % prime;
+        long long b0 = modPow(a, m, prime); // Using modPow instead of pow for modular exponentiation
         
         //checking for primality
-        if(b0 == -1 || b0== 1){
+        if(b0 == prime-1 || b0 == 1){
+            isPrime = true;
             return prime;
         }
+        //reaching here means the number failed the primality test
+        
     }
-
+    
+    // should never reach here
+    return -1;
 }
 
 
 /*
 Encryption functino: return Ciphertext
 */
-vector<int> encrypt(string msg, int e, int n ){
-    vector<int> cipherText;
+
+vector<long long> encrypt(string msg, long long e, long long n) {
+    vector<long long> cipherText;
     //iterating through message
     for (char c: msg){
-        int aValue = static_cast<int>(c):
-        int encrypt = pow(aVlaue, e) %n ; 
+        long long aValue = static_cast<int>(c); //casting char to int
+        long long encrypt = modPow(aValue, e, n); // aValue^e mod n
         cipherText.push_back(encrypt);
     }
 
     return cipherText;
 }
 
-/*
-Decryption Function: return ciphered text
-*/
-string decrypt(int cipherText, int d, int n ){
 
+string decrypt(vector<long long> cipherText, long long d, long long n ){
+    string res;
+    for (long long c : cipherText) {
+        long long decipheredAscii = modPow(c, d, n);
+        
+        // Append only printable characters
+        if (decipheredAscii >= 32 && decipheredAscii <= 126) {
+            res += static_cast<char>(decipheredAscii);
+        } else {
+            res += '*'; // Placeholder for invalid characters
+        }
+    }
+    return res;
 }
+
 
 int main(){
     string M;
-    cout << "Enter a Message" << endl;
-    cin >> M;
-
+    cout << "Enter a Message: ";
+    getline(cin, M);
 
     //RSA values of Algorithm
-    int p = generate_prime();
-    int q = generater_prime();
-    int n = p*q;
-    int r = (p-1) * (q-1);  //phi or to
-    int e = 65537; //predefined encryption exponenet
-    int d = pow(e, -1) % r; //private key
+    long long p = generate_prime();
+    long long q = generate_prime();
+    long long n = p*q;
+    long long r = (p-1) * (q-1);  //phi or to
+    long long e = 65537; //predefined encryption exponenet
+    long long d = modInverse(e, r); //private key --> d = e^-1 mod r
 
     cout << "p:" << p << endl;
     cout << "q:" << q << endl; 
@@ -95,21 +150,20 @@ int main(){
     cout << "d:" << d << endl; 
 
     //encrypting the message
-    vector<int> cipherText = encrypt(M, e, n);
+    vector<long long> cipherText = encrypt(M, e, n);
 
     //printing the encrypted message
     cout << "Ciphertext: [";
-    for (int i = 0; i< vectorLength(cipherText)-1;i++){
-        cout << cipherText[i] << ", ";
+    for (int i = 0; i< cipherText.size();i++){
+        cout << cipherText[i];
+        if (i != cipherText.size()-1){
+            cout << ", ";
+        }
     }
-    cout<< cipherText[i-1] << "]";// for the final value
+    cout << "]" << endl;// for the final value
 
+    string decipheredText  = decrypt(cipherText, d, n); 
 
-    
-
-
-
-
-
+    cout<< "Decrypted message: " << decipheredText << endl;
 
 }
